@@ -1,10 +1,11 @@
 version: '3.9'
 
+# Local development configuration; not intended as production deployment.
 services:
   backend:
     build: .
     ports:
-      - "8000:8000"
+      - "${STAYZI_BIND_ADDRESS:-127.0.0.1}:8000:8000"
     volumes:
       - .:/app
     depends_on:
@@ -15,18 +16,19 @@ services:
       rabbitmq:
         condition: service_started
     environment:
-      - DATABASE_URL=postgresql://postgres:243a243a243@db:5432/stayzi_db
-      - REDIS_URL=redis://redis:6379/0
+      DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/stayzi_db"
+      SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY in .env}"
+      REDIS_URL: "redis://redis:6379/0"
     entrypoint: ["/bin/sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
 
   db:
     image: postgres
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 243a243a243
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
       POSTGRES_DB: stayzi_db
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d stayzi_db"]
       interval: 5s
@@ -36,13 +38,13 @@ services:
   redis:
     image: redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
 
   rabbitmq:
     image: rabbitmq:3-management
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_DEFAULT_USER:-guest}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_DEFAULT_PASS:-guest}"
